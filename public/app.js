@@ -11,6 +11,78 @@
   let scannerDetector = null;
   let scannerFrameRequest = null;
   let scannerLastValue = '';
+  const APP_VERSION = String((window.VINTED_CONFIG && window.VINTED_CONFIG.APP_VERSION) || 'local-dev').trim();
+  const APP_VERSION_STORAGE_KEY = 'vinted.inventory.appVersion';
+
+  function setStartupText(text) {
+    const el = document.getElementById('startupLoaderText');
+    if (el) el.textContent = text || '';
+  }
+
+  async function prepareAppVersion() {
+    setStartupText('Checking for updates...');
+    const lastVersion = localStorage.getItem(APP_VERSION_STORAGE_KEY);
+    if (lastVersion && lastVersion !== APP_VERSION) {
+      setStartupText('Updating cached app data...');
+      localStorage.clear();
+      sessionStorage.clear();
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(key => caches.delete(key)));
+      }
+      localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_VERSION);
+      window.__appCacheWasCleared = true;
+      return;
+    }
+    if (!lastVersion) localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_VERSION);
+    setStartupText('Loading app...');
+  }
+
+  function hideStartupLoader() {
+    const loader = document.getElementById('startupLoader');
+    if (!loader) return;
+    loader.classList.add('is-hidden');
+    setTimeout(() => loader.remove(), 220);
+  }
+
+  function loaderHtml(text, variant = 'panel') {
+    const className = variant === 'compact' ? 'loader-compact' : 'loader-panel';
+    return `<div class="${className}"><span class="loader-dot"></span><span>${escapeHtml(text)}</span></div>`;
+  }
+
+  function tableSkeletonHtml(text, columns = 6, rows = 6) {
+    let body = '';
+    for (let row = 0; row < rows; row++) {
+      body += '<tr>';
+      for (let col = 0; col < columns; col++) {
+        const width = 42 + ((row + col) % 4) * 14;
+        body += `<td><div class="skeleton-line" style="width:${width}%"></div></td>`;
+      }
+      body += '</tr>';
+    }
+    return `
+      <div class="loader-compact"><span class="loader-dot"></span><span>${escapeHtml(text)}</span></div>
+      <table class="skeleton-table"><tbody>${body}</tbody></table>
+    `;
+  }
+
+  function dashboardSkeletonHtml() {
+    let cards = '';
+    for (let i = 0; i < 8; i++) {
+      cards += '<div class="skeleton-card"><div class="skeleton-line" style="width:62%"></div><div class="skeleton-line" style="width:36%"></div></div>';
+    }
+    return `<div class="loader-compact"><span class="loader-dot"></span><span>Loading dashboard...</span></div><div class="skeleton-card-grid">${cards}</div>`;
+  }
+
+  function setElementHtml(id, html) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  }
+
+  const startupReady = prepareAppVersion().catch(err => {
+    console.warn('Version preparation failed', err);
+    setStartupText('Loading app...');
+  });
 
   function renderMessage(id, text, type) {
     const el = document.getElementById(id);
@@ -381,8 +453,35 @@
     openEditModal();
     pendingEditItemPictureFiles = [];
     pendingEditItemLabelFiles = [];
+    safeSet('editItemId', itemId);
+    safeSet('editTitle', '');
+    safeSet('editCategory', '');
+    safeSet('editBrand', '');
+    safeSet('editSize', '');
+    safeSet('editCondition', '');
+    safeSet('editColor', '');
+    safeSet('editPurchasePrice', '');
+    safeSet('editTargetSalePrice', '');
+    safeSet('editDesiredProfit', '');
+    safeSet('editPlatformFee', '');
+    safeSet('editOtherCosts', '');
+    safeSet('editPurchaseDate', '');
+    safeSet('editListingDate', '');
+    safeSet('editKeywords', '');
+    safeSet('editStorageLocation', '');
+    safeSet('editSource', '');
+    safeSet('editVintedUrl', '');
+    safeSet('editStatus', 'Draft');
+    safeSet('editDescription', '');
+    safeSet('editNotes', '');
+    safeSet('modalSalePrice', '');
+    safeSetHtml('editMeta', `Item ID: <strong>${escapeHtml(itemId)}</strong>`);
     renderPendingPictureList(pendingEditItemPictureFiles, 'editItemPendingPictures', 'editItem');
     renderPendingLabelList(pendingEditItemLabelFiles, 'editItemPendingLabels', 'editLabel');
+    setElementHtml('editPicturesGallery', loaderHtml('Loading pictures...'));
+    setElementHtml('editLabelsGallery', loaderHtml('Loading labels...'));
+    setElementHtml('auditLogTable', tableSkeletonHtml('Loading audit history...', 6, 4));
+    setElementHtml('packagingProofCard', loaderHtml('Loading packaging proof...'));
 
     const cachedItem = getCachedItem(itemId);
 
@@ -472,6 +571,7 @@
 
   function loadActiveItemsTable() {
     const query = document.getElementById('activeTableSearch')?.value || '';
+    setElementHtml('activeItemsTable', tableSkeletonHtml('Loading records...', 8, 7));
 
     google.script.run
       .withSuccessHandler(payload => {
@@ -549,6 +649,7 @@
 
   function loadArchivedItemsTable() {
     const query = document.getElementById('archivedTableSearch')?.value || '';
+    setElementHtml('archivedItemsTable', tableSkeletonHtml('Loading records...', 7, 6));
 
     google.script.run
       .withSuccessHandler(payload => {
@@ -1130,6 +1231,8 @@
       document.getElementById('pictureChecklist').innerHTML = '';
       return;
     }
+    setElementHtml('pictureChecklist', loaderHtml('Loading photo checklist...', 'compact'));
+    setElementHtml('picturesGallery', loaderHtml('Loading pictures...'));
 
     google.script.run
       .withSuccessHandler(function(payload) {
@@ -1175,6 +1278,8 @@
       document.getElementById('editPictureChecklist').innerHTML = '';
       return;
     }
+    setElementHtml('editPictureChecklist', loaderHtml('Loading photo checklist...', 'compact'));
+    setElementHtml('editPicturesGallery', loaderHtml('Loading pictures...'));
 
     google.script.run
       .withSuccessHandler(function(payload) {
@@ -1309,6 +1414,7 @@
       document.getElementById('labelsGallery').innerHTML = '<p class="muted">Select an item first.</p>';
       return;
     }
+    setElementHtml('labelsGallery', loaderHtml('Loading labels...'));
 
     google.script.run
       .withSuccessHandler(function(labels) {
@@ -1339,6 +1445,7 @@
       document.getElementById('editLabelsGallery').innerHTML = '<p class="muted">No item selected.</p>';
       return;
     }
+    setElementHtml('editLabelsGallery', loaderHtml('Loading labels...'));
 
     google.script.run
       .withSuccessHandler(function(labels) {
@@ -1391,6 +1498,7 @@
   }
 
   function loadAuditLog(itemId) {
+    setElementHtml('auditLogTable', tableSkeletonHtml('Loading audit history...', 6, 4));
     google.script.run
       .withSuccessHandler(function(rows) {
         const el = document.getElementById('auditLogTable');
@@ -1434,6 +1542,7 @@
   }
 
   function loadPackagingProofCard(itemId) {
+    setElementHtml('packagingProofCard', loaderHtml('Loading packaging proof...'));
     google.script.run
       .withSuccessHandler(function(result) {
         const el = document.getElementById('packagingProofCard');
@@ -1476,6 +1585,7 @@
   }
 
   function loadTasks() {
+    setElementHtml('tasksGrouped', tableSkeletonHtml('Loading tasks...', 8, 5));
     google.script.run
       .withSuccessHandler(function(tasks) {
         const el = document.getElementById('tasksGrouped');
@@ -1569,6 +1679,9 @@
 
   function loadDashboard() {
     const range = document.getElementById('dashboardRange')?.value || 'last30';
+    setElementHtml('summaryCards', dashboardSkeletonHtml());
+    setElementHtml('statusChart', loaderHtml('Loading status breakdown...'));
+    setElementHtml('sourceChart', loaderHtml('Loading source breakdown...'));
     google.script.run
       .withSuccessHandler(data => {
         const s = data.summary;
@@ -1683,7 +1796,8 @@
       .updateExistingItem(data);
   });
 
-  window.addEventListener('load', function () {
+  window.addEventListener('load', async function () {
+    await startupReady;
     detectDeviceClass();
     showLoginScreen();
 
@@ -1813,4 +1927,6 @@
     });
 
     window.addEventListener('resize', detectDeviceClass);
+    if (window.__appCacheWasCleared) showToast('Updated to the latest version', 'success');
+    hideStartupLoader();
   });

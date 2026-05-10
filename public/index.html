@@ -8,6 +8,16 @@
     <link rel="stylesheet" href="app.css">
   </head>
   <body>
+    <div id="startupLoader" class="startup-loader" role="status" aria-live="polite">
+      <div class="startup-loader-card">
+        <div class="loader-spinner"></div>
+        <div>
+          <div class="startup-loader-title">Starting Inventory Manager</div>
+          <div id="startupLoaderText" class="startup-loader-text">Checking for updates...</div>
+        </div>
+      </div>
+    </div>
+
     <div id="toastContainer" class="toast-container"></div>
 
     <div id="loginScreen" class="login-screen">

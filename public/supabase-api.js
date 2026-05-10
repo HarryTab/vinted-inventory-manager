@@ -85,6 +85,7 @@
     config.SUPABASE_URL = String(config.SUPABASE_URL || '').trim().replace(/\/+$/, '');
     config.SUPABASE_ANON_KEY = String(config.SUPABASE_ANON_KEY || '').trim();
     config.SUPABASE_PUBLIC_URL = String(config.SUPABASE_PUBLIC_URL || `${config.SUPABASE_URL}/storage/v1/object/public`).trim();
+    config.APP_VERSION = String(config.APP_VERSION || 'local-dev').trim();
     if (!config.SUPABASE_URL || !config.SUPABASE_ANON_KEY) {
       throw new Error('Missing Supabase config. Copy public/config.example.js to public/config.js and fill in the anon key.');
     }
@@ -380,9 +381,9 @@
 
   async function recordSale(itemId, actualSalePrice) {
     const current = await getInventoryById(itemId);
-    await saveInventory(itemId, { actual_sale_price: toNumber(actualSalePrice), sale_date: isoDate(new Date()), status: 'Sold' });
+    const updated = await saveInventory(itemId, { actual_sale_price: toNumber(actualSalePrice), sale_date: isoDate(new Date()), status: 'Sold' });
     await logStatusChange(itemId, current.status, 'Sold', 'Sale recorded');
-    return { success: true };
+    return { success: true, actualProfit: updated.actual_profit };
   }
 
   async function relistItem(itemId) {
@@ -425,12 +426,25 @@
     return { success: true, pictureId: data.picture_id, imageUrl: data.image_url };
   }
 
+  function buildPhotoChecklist(pictures) {
+    const types = new Set((pictures || []).map(pic => pic.photoType));
+    const missing = REQUIRED_PHOTO_TYPES_FOR_LISTING.filter(type => !types.has(type));
+    return {
+      required: REQUIRED_PHOTO_TYPES_FOR_LISTING,
+      missing,
+      hasCover: (pictures || []).some(pic => pic.isCover),
+      hasPackagingProof: (pictures || []).some(pic => pic.isPackagingProof)
+    };
+  }
+
   async function getPicturesForItem(itemId) {
     const rows = await query(supabase.from('pictures').select('*').eq('item_id', itemId).order('uploaded_at', { ascending: false }));
-    return (rows || []).map(row => ({
+    const pictures = (rows || []).map(row => ({
       pictureId: row.picture_id,
       itemId: row.item_id,
       imageUrl: row.image_url,
+      thumbUrl: row.image_url,
+      fullImageUrl: row.image_url,
       driveFileId: row.storage_path,
       note: row.note || '',
       isCover: !!row.is_cover,
@@ -438,6 +452,7 @@
       photoType: row.photo_type || 'General',
       uploadedAt: row.uploaded_at || ''
     }));
+    return { pictures, checklist: buildPhotoChecklist(pictures) };
   }
 
   async function updatePictureMeta(pictureId, payload) {
@@ -488,8 +503,10 @@
   }
 
   async function getPackagingProofPictureForItem(itemId) {
-    const pictures = await getPicturesForItem(itemId);
-    return pictures.find(pic => pic.isPackagingProof) || null;
+    const payload = await getPicturesForItem(itemId);
+    const picture = payload.pictures.find(pic => pic.isPackagingProof);
+    if (!picture) return { exists: false };
+    return { exists: true, ...picture };
   }
 
   async function getTasks() {
