@@ -28,15 +28,20 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Write browser config
-        shell: bash
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          cat > public/config.js <<'EOF'
-          window.VINTED_CONFIG = {
-            SUPABASE_URL: '${{ vars.SUPABASE_URL }}',
-            SUPABASE_ANON_KEY: '${{ secrets.SUPABASE_ANON_KEY }}',
-            SUPABASE_PUBLIC_URL: '${{ vars.SUPABASE_PUBLIC_URL }}'
+          node - <<'NODE'
+          const fs = require('fs');
+          const supabaseUrl = String(process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+          const config = {
+            SUPABASE_URL: supabaseUrl,
+            SUPABASE_ANON_KEY: String(process.env.SUPABASE_ANON_KEY || '').trim(),
+            SUPABASE_PUBLIC_URL: `${supabaseUrl}/storage/v1/object/public`
           };
-          EOF
+          fs.writeFileSync('public/config.js', `window.VINTED_CONFIG = ${JSON.stringify(config, null, 2)};\n`);
+          NODE
 
       - name: Add nojekyll marker
         run: touch public/.nojekyll

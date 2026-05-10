@@ -20,6 +20,10 @@
                 return;
               }
 
+              if (location.hostname.endsWith('github.io')) {
+                throw new Error('The static Supabase API did not load. Check config.js and the browser console.');
+              }
+
               const response = await fetch(`/api/rpc/${String(prop)}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

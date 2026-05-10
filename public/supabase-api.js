@@ -82,6 +82,9 @@
 
   function getConfig() {
     const config = window.VINTED_CONFIG || {};
+    config.SUPABASE_URL = String(config.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+    config.SUPABASE_ANON_KEY = String(config.SUPABASE_ANON_KEY || '').trim();
+    config.SUPABASE_PUBLIC_URL = String(config.SUPABASE_PUBLIC_URL || `${config.SUPABASE_URL}/storage/v1/object/public`).trim();
     if (!config.SUPABASE_URL || !config.SUPABASE_ANON_KEY) {
       throw new Error('Missing Supabase config. Copy public/config.example.js to public/config.js and fill in the anon key.');
     }
