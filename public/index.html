@@ -1,0 +1,597 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Vinted Inventory Manager</title>
+    <link rel="stylesheet" href="/app.css">
+  </head>
+  <body>
+    <div id="toastContainer" class="toast-container"></div>
+
+    <div id="loginScreen" class="login-screen">
+      <div class="retro-window">
+        <div class="retro-titlebar">
+          <span>System Login</span>
+          <div class="retro-title-buttons">
+            <button type="button" class="retro-title-btn" disabled>?</button>
+            <button type="button" class="retro-title-btn" disabled>Ã—</button>
+          </div>
+        </div>
+
+        <div class="retro-body">
+          <div class="retro-left">
+            <p class="retro-copy">
+              Please enter your user name and password to access the system.
+            </p>
+
+            <div class="retro-form-row">
+              <label for="loginIdentifier">User name:</label>
+              <input id="loginIdentifier" type="text" autocomplete="username">
+            </div>
+
+            <div class="retro-form-row">
+              <label for="loginPassword">Password:</label>
+              <input id="loginPassword" type="password" autocomplete="current-password">
+            </div>
+
+            <div id="loginResult"></div>
+          </div>
+
+          <div class="retro-right">
+            <button type="button" class="retro-button" onclick="submitLogin()">OK</button>
+            <button type="button" class="retro-button" onclick="clearLoginForm()">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="appShell" class="app-shell hidden">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">Vinted Reselling</div>
+          <h1>Inventory Manager</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="secondary" type="button" onclick="refreshAll()">Refresh</button>
+          <button class="secondary" type="button" onclick="logout()">Logout</button>
+        </div>
+      </header>
+
+      <nav class="tabbar">
+        <button class="tab active" id="tabBtn-dashboardTab" onclick="showTab('dashboardTab', this)">Dashboard</button>
+        <button class="tab" id="tabBtn-addTab" onclick="showTab('addTab', this)">Add Item</button>
+        <button class="tab" id="tabBtn-tableTab" onclick="showTab('tableTab', this)">Active Items</button>
+        <button class="tab" id="tabBtn-archivedTab" onclick="showTab('archivedTab', this)">Archived Items</button>
+        <button class="tab" id="tabBtn-actionsTab" onclick="showTab('actionsTab', this)">Actions</button>
+        <button class="tab" id="tabBtn-tasksTab" onclick="showTab('tasksTab', this)">Tasks</button>
+        <button class="tab" id="tabBtn-picturesTab" onclick="showTab('picturesTab', this)">Pictures</button>
+        <button class="tab" id="tabBtn-labelsTab" onclick="showTab('labelsTab', this)">Shipping Labels</button>
+      </nav>
+
+      <main class="content">
+        <section id="dashboardTab" class="page active">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Dashboard</h2>
+              <div class="button-row compact">
+                <select id="dashboardRange" onchange="loadDashboard()">
+                  <option value="last7">Last 7 days</option>
+                  <option value="last30" selected>Last 30 days</option>
+                  <option value="last365">Last 365 days</option>
+                  <option value="all">All time</option>
+                </select>
+              </div>
+            </div>
+            <div class="cards-grid" id="summaryCards"></div>
+          </section>
+
+          <div class="panel-grid two">
+            <section class="panel">
+              <div class="panel-head"><h2>Status Breakdown</h2></div>
+              <div id="statusChart"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head"><h2>Source Breakdown</h2></div>
+              <div id="sourceChart"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="addTab" class="page">
+          <section class="panel">
+            <div class="panel-head"><h2>Add Item</h2></div>
+
+            <form id="itemForm">
+              <div class="form-grid">
+                <label><span>Title</span><input name="title" required></label>
+                <label><span>Category</span><input name="category"></label>
+                <label><span>Brand</span><input name="brand"></label>
+                <label><span>Size</span><input name="size"></label>
+                <label><span>Condition</span><input name="condition"></label>
+                <label><span>Color</span><input name="color"></label>
+
+                <label><span>Purchase Price</span><input name="purchasePrice" type="number" step="0.01" required></label>
+                <label><span>Target Sale Price</span><input name="targetSalePrice" type="number" step="0.01" required></label>
+                <label><span>Desired Profit</span><input name="desiredProfit" type="number" step="0.01"></label>
+                <label><span>Platform Fee</span><input name="platformFee" type="number" step="0.01"></label>
+                <label><span>Other Costs</span><input name="otherCosts" type="number" step="0.01"></label>
+
+                <label><span>Purchase Date</span><input name="purchaseDate" type="date"></label>
+                <label><span>Listing Date</span><input name="listingDate" type="date"></label>
+                <label><span>Keywords</span><input name="keywords"></label>
+                <label><span>Storage Location</span><input name="storageLocation"></label>
+                <label><span>Source</span><input name="source"></label>
+                <label><span>Vinted URL</span><input name="vintedUrl"></label>
+
+                <label>
+                  <span>Status</span>
+                  <select name="status">
+                    <option value="Draft">Draft</option>
+                    <option value="Ready to List">Ready to List</option>
+                    <option value="Listed">Listed</option>
+                    <option value="Reserved">Reserved</option>
+                    <option value="Sold">Sold</option>
+                    <option value="Packed">Packed</option>
+                    <option value="Dispatched">Dispatched</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Returned">Returned</option>
+                    <option value="Archived">Archived</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="full-field">
+                <span>Notes</span>
+                <textarea name="notes"></textarea>
+              </label>
+
+              <section class="panel panel-soft item-pictures-inline">
+                <div class="panel-head"><h2>Add Pictures Now</h2></div>
+                <label><span>Select one or more pictures</span><input id="addItemPictures" type="file" accept="image/*" multiple></label>
+                <div id="addItemPendingPictures"></div>
+              </section>
+
+              <div class="button-row">
+                <button type="submit">Add Item</button>
+              </div>
+            </form>
+
+            <div id="result"></div>
+          </section>
+        </section>
+
+        <section id="tableTab" class="page">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Active Items</h2>
+              <div class="button-row compact">
+                <button class="secondary" type="button" onclick="loadActiveItemsTable()">Refresh Table</button>
+                <button type="button" onclick="generatePackingPdf()">Packing PDF</button>
+              </div>
+            </div>
+
+            <div class="toolbar-card">
+              <div class="autocomplete-wrap">
+                <label>
+                  <span>Search active items</span>
+                  <input id="activeTableSearch" autocomplete="off" placeholder="Type item ID, barcode or title">
+                </label>
+                <div id="activeTableSearchResults" class="autocomplete-list hidden"></div>
+              </div>
+
+              <div class="bulk-row">
+                <label class="bulk-label">
+                  <span>Bulk status change</span>
+                  <select id="bulkStatusSelect">
+                    <option value="">Choose status</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Ready to List">Ready to List</option>
+                    <option value="Listed">Listed</option>
+                    <option value="Reserved">Reserved</option>
+                    <option value="Sold">Sold</option>
+                    <option value="Packed">Packed</option>
+                    <option value="Dispatched">Dispatched</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Returned">Returned</option>
+                    <option value="Archived">Archived</option>
+                  </select>
+                </label>
+                <button type="button" class="secondary" onclick="applyBulkStatusUpdate()">Apply to selected</button>
+              </div>
+            </div>
+
+            <div id="packingPdfResult"></div>
+            <div id="bulkResult"></div>
+            <div id="activeItemsTable"></div>
+          </section>
+        </section>
+
+        <section id="archivedTab" class="page">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Archived Items</h2>
+              <button class="secondary" type="button" onclick="loadArchivedItemsTable()">Refresh Table</button>
+            </div>
+
+            <div class="autocomplete-wrap">
+              <label>
+                <span>Search archived items</span>
+                <input id="archivedTableSearch" autocomplete="off" placeholder="Type item ID, barcode or title">
+              </label>
+              <div id="archivedTableSearchResults" class="autocomplete-list hidden"></div>
+            </div>
+
+            <div id="archivedItemsTable"></div>
+          </section>
+        </section>
+
+        <section id="actionsTab" class="page">
+          <div class="panel-grid two">
+            <section class="panel">
+              <div class="panel-head"><h2>Update Status</h2></div>
+
+              <div class="autocomplete-wrap">
+                <label>
+                  <span>Find Item</span>
+                  <input id="statusSearch" autocomplete="off" placeholder="Type item ID, barcode or title">
+                </label>
+                <div id="statusSearchResults" class="autocomplete-list hidden"></div>
+              </div>
+
+              <input id="statusItemId" type="hidden">
+
+              <label>
+                <span>New Status</span>
+                <select id="newStatus">
+                  <option value="Draft">Draft</option>
+                  <option value="Ready to List">Ready to List</option>
+                  <option value="Listed">Listed</option>
+                  <option value="Reserved">Reserved</option>
+                  <option value="Sold">Sold</option>
+                  <option value="Packed">Packed</option>
+                  <option value="Dispatched">Dispatched</option>
+                  <option value="Delivered">Delivered</option>
+                  <option value="Returned">Returned</option>
+                  <option value="Archived">Archived</option>
+                </select>
+              </label>
+
+              <label><span>Note</span><input id="statusNote"></label>
+
+              <div class="button-row">
+                <button type="button" onclick="updateStatus()">Update Status</button>
+              </div>
+
+              <div id="statusResult"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head"><h2>Record Sale</h2></div>
+
+              <div class="autocomplete-wrap">
+                <label>
+                  <span>Find Item</span>
+                  <input id="saleSearch" autocomplete="off" placeholder="Type item ID, barcode or title">
+                </label>
+                <div id="saleSearchResults" class="autocomplete-list hidden"></div>
+              </div>
+
+              <input id="saleItemId" type="hidden">
+
+              <label><span>Actual Sale Price</span><input id="actualSalePrice" type="number" step="0.01"></label>
+
+              <div class="button-row">
+                <button type="button" onclick="recordSale()">Record Sale</button>
+              </div>
+
+              <div id="saleResult"></div>
+            </section>
+          </div>
+
+          <div class="panel-grid two">
+            <section class="panel">
+              <div class="panel-head"><h2>One-Click Relist</h2></div>
+
+              <div class="autocomplete-wrap">
+                <label>
+                  <span>Find Item</span>
+                  <input id="relistSearch" autocomplete="off" placeholder="Type item ID, barcode or title">
+                </label>
+                <div id="relistSearchResults" class="autocomplete-list hidden"></div>
+              </div>
+
+              <input id="relistItemId" type="hidden">
+
+              <div class="button-row">
+                <button type="button" onclick="relistItem()">Relist Now</button>
+              </div>
+
+              <div id="relistResult"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head"><h2>QR / Barcode Scanner</h2></div>
+
+              <div class="scanner-box">
+                <video id="scannerVideo" class="scanner-video" playsinline muted></video>
+                <div id="scannerOverlay" class="scanner-overlay">Camera idle</div>
+              </div>
+
+              <div class="button-row compact">
+                <button type="button" onclick="startQrScanner()">Start Scanner</button>
+                <button type="button" class="secondary" onclick="stopQrScanner()">Stop</button>
+              </div>
+
+              <label><span>Manual QR / barcode value</span><input id="scannerManualCode" autocomplete="off" placeholder="Scan or paste code"></label>
+              <div class="button-row compact">
+                <button type="button" class="secondary" onclick="lookupManualScannerCode()">Lookup</button>
+              </div>
+
+              <input id="scannerItemId" type="hidden">
+              <div id="scannerItemSummary" class="muted"></div>
+
+              <label>
+                <span>New Status</span>
+                <select id="scannerNewStatus">
+                  <option value="Draft">Draft</option>
+                  <option value="Ready to List">Ready to List</option>
+                  <option value="Listed">Listed</option>
+                  <option value="Reserved">Reserved</option>
+                  <option value="Sold">Sold</option>
+                  <option value="Packed">Packed</option>
+                  <option value="Dispatched">Dispatched</option>
+                  <option value="Delivered">Delivered</option>
+                  <option value="Returned">Returned</option>
+                  <option value="Archived">Archived</option>
+                </select>
+              </label>
+              <label><span>Note</span><input id="scannerStatusNote" placeholder="Optional"></label>
+
+              <div class="button-row">
+                <button type="button" onclick="applyScannedStatus()">Update Scanned Item</button>
+              </div>
+
+              <div id="scannerResult"></div>
+            </section>
+          </div>
+
+          <div class="panel-grid two">
+            <section class="panel">
+              <div class="panel-head"><h2>Alerts</h2></div>
+              <div class="button-row">
+                <button type="button" onclick="sendUrgentTaskEmail()">Send Urgent Task Email</button>
+              </div>
+              <div id="triggerResult"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="tasksTab" class="page">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Tasks</h2>
+              <div class="button-row compact">
+                <button class="secondary" type="button" onclick="loadTasks()">Refresh Tasks</button>
+              </div>
+            </div>
+
+            <div id="tasksGrouped"></div>
+          </section>
+        </section>
+
+        <section id="picturesTab" class="page">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Pictures</h2>
+              <div class="muted">Upload any number of pictures per item, with cover / proof flags.</div>
+            </div>
+
+            <div class="autocomplete-wrap">
+              <label>
+                <span>Select item</span>
+                <input id="pictureItemSearch" autocomplete="off" placeholder="Type item ID, barcode or title">
+              </label>
+              <div id="pictureItemSearchResults" class="autocomplete-list hidden"></div>
+            </div>
+
+            <input type="hidden" id="pictureItemId">
+
+            <label><span>Choose images</span><input id="pictureFiles" type="file" accept="image/*" multiple></label>
+
+            <div id="pendingPictures"></div>
+
+            <div class="button-row">
+              <button type="button" onclick="uploadSelectedPictures()">Upload Selected Pictures</button>
+              <button type="button" class="secondary" onclick="loadPicturesForSelectedItem()">Refresh Pictures</button>
+            </div>
+
+            <div id="picturesResult"></div>
+            <div id="pictureChecklist"></div>
+            <div id="picturesGallery" class="pictures-gallery"></div>
+          </section>
+        </section>
+
+        <section id="labelsTab" class="page">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Shipping Labels</h2>
+              <div class="muted">Upload shipping labels / QR code PDFs and link them to an item.</div>
+            </div>
+
+            <div class="autocomplete-wrap">
+              <label>
+                <span>Select item</span>
+                <input id="labelItemSearch" autocomplete="off" placeholder="Type item ID, barcode or title">
+              </label>
+              <div id="labelItemSearchResults" class="autocomplete-list hidden"></div>
+            </div>
+
+            <input type="hidden" id="labelItemId">
+
+            <label><span>Choose PDF files</span><input id="labelFiles" type="file" accept="application/pdf" multiple></label>
+            <div id="pendingLabels"></div>
+
+            <div class="button-row">
+              <button type="button" onclick="uploadSelectedLabels()">Upload Shipping Labels</button>
+              <button type="button" class="secondary" onclick="loadLabelsForSelectedItem()">Refresh Labels</button>
+            </div>
+
+            <div id="labelsResult"></div>
+            <div id="labelsGallery" class="pictures-gallery"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div id="editModal" class="modal-overlay hidden">
+      <div class="modal-panel">
+        <div class="modal-head">
+          <div>
+            <h2>Edit Item</h2>
+            <div class="inline-meta" id="editMeta"></div>
+          </div>
+          <button class="secondary modal-close" type="button" onclick="closeEditModal()">Close</button>
+        </div>
+
+        <form id="editForm">
+          <input type="hidden" name="itemId" id="editItemId">
+
+          <div class="form-grid">
+            <label><span>Title</span><input name="title" id="editTitle" required></label>
+            <label><span>Category</span><input name="category" id="editCategory"></label>
+            <label><span>Brand</span><input name="brand" id="editBrand"></label>
+            <label><span>Size</span><input name="size" id="editSize"></label>
+            <label><span>Condition</span><input name="condition" id="editCondition"></label>
+            <label><span>Color</span><input name="color" id="editColor"></label>
+
+            <label><span>Purchase Price</span><input name="purchasePrice" id="editPurchasePrice" type="number" step="0.01"></label>
+            <label><span>Target Sale Price</span><input name="targetSalePrice" id="editTargetSalePrice" type="number" step="0.01"></label>
+            <label><span>Desired Profit</span><input name="desiredProfit" id="editDesiredProfit" type="number" step="0.01"></label>
+            <label><span>Platform Fee</span><input name="platformFee" id="editPlatformFee" type="number" step="0.01"></label>
+            <label><span>Other Costs</span><input name="otherCosts" id="editOtherCosts" type="number" step="0.01"></label>
+
+            <label><span>Purchase Date</span><input name="purchaseDate" id="editPurchaseDate" type="date"></label>
+            <label><span>Listing Date</span><input name="listingDate" id="editListingDate" type="date"></label>
+            <label><span>Keywords</span><input name="keywords" id="editKeywords"></label>
+            <label><span>Storage Location</span><input name="storageLocation" id="editStorageLocation"></label>
+            <label><span>Source</span><input name="source" id="editSource"></label>
+            <label><span>Vinted URL</span><input name="vintedUrl" id="editVintedUrl"></label>
+
+            <label>
+              <span>Status</span>
+              <select name="status" id="editStatus">
+                <option value="Draft">Draft</option>
+                <option value="Ready to List">Ready to List</option>
+                <option value="Listed">Listed</option>
+                <option value="Reserved">Reserved</option>
+                <option value="Sold">Sold</option>
+                <option value="Packed">Packed</option>
+                <option value="Dispatched">Dispatched</option>
+                <option value="Delivered">Delivered</option>
+                <option value="Returned">Returned</option>
+                <option value="Archived">Archived</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="full-field">
+            <span>Description</span>
+            <textarea name="description" id="editDescription"></textarea>
+          </label>
+
+          <label class="full-field">
+            <span>Notes</span>
+            <textarea name="notes" id="editNotes"></textarea>
+          </label>
+
+          <section class="panel panel-soft item-pictures-inline">
+            <div class="panel-head"><h2>Pictures for This Item</h2></div>
+            <label><span>Add one or more pictures</span><input id="editItemPictures" type="file" accept="image/*" multiple></label>
+            <div id="editItemPendingPictures"></div>
+            <div class="button-row">
+              <button type="button" class="secondary" onclick="uploadEditItemPictures()">Upload Pictures</button>
+              <button type="button" class="secondary" onclick="loadEditItemPictures()">Refresh Pictures</button>
+            </div>
+            <div id="editPicturesResult"></div>
+            <div id="editPictureChecklist"></div>
+            <div id="editPicturesGallery" class="pictures-gallery"></div>
+          </section>
+
+          <section class="panel panel-soft item-pictures-inline">
+            <div class="panel-head"><h2>Proof of Packaging</h2></div>
+            <div id="packagingProofCard"></div>
+          </section>
+
+          <section class="panel panel-soft item-pictures-inline">
+            <div class="panel-head"><h2>Shipping Labels for This Item</h2></div>
+            <label><span>Add one or more PDF labels</span><input id="editItemLabels" type="file" accept="application/pdf" multiple></label>
+            <div id="editItemPendingLabels"></div>
+            <div class="button-row">
+              <button type="button" class="secondary" onclick="uploadEditItemLabels()">Upload Labels</button>
+              <button type="button" class="secondary" onclick="loadEditItemLabels()">Refresh Labels</button>
+            </div>
+            <div id="editLabelsResult"></div>
+            <div id="editLabelsGallery" class="pictures-gallery"></div>
+          </section>
+
+          <section class="panel panel-soft item-pictures-inline">
+            <div class="panel-head"><h2>Audit Log</h2></div>
+            <div id="auditLogTable"></div>
+          </section>
+
+          <div class="button-row">
+            <button type="submit">Save Changes</button>
+            <button type="button" class="secondary" onclick="generateTemplateDescriptionForSelected()">Template Description</button>
+            <button type="button" class="secondary" onclick="generateAIDescriptionForSelected()">AI Description</button>
+            <button type="button" class="secondary" onclick="copyDescription()">Copy Description</button>
+            <button type="button" class="secondary" onclick="duplicateCurrentItem()">Duplicate Item</button>
+          </div>
+        </form>
+
+        <section class="panel modal-subpanel">
+          <div class="panel-head"><h2>Record Sale</h2></div>
+          <div class="form-grid">
+            <label><span>Actual Sale Price</span><input id="modalSalePrice" type="number" step="0.01"></label>
+          </div>
+          <div class="button-row">
+            <button type="button" onclick="saveModalSale()">Record Sale & Mark Sold</button>
+          </div>
+          <div id="modalSaleResult"></div>
+        </section>
+
+        <div id="editResult"></div>
+      </div>
+    </div>
+
+    <div id="imageLightbox" class="modal-overlay hidden">
+      <div class="modal-panel" style="width:min(96vw,1400px);height:min(94vh,940px);display:flex;flex-direction:column;">
+        <div class="modal-head">
+          <div><h2>Image Preview</h2></div>
+          <button class="secondary modal-close" type="button" onclick="closeImageLightbox()">Close</button>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:0;">
+          <img id="lightboxImage" src="" alt="Preview" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;background:#fff;">
+        </div>
+      </div>
+    </div>
+
+    <div id="pdfLightbox" class="modal-overlay hidden">
+      <div class="modal-panel" style="width:min(96vw,1400px);height:min(94vh,940px);display:flex;flex-direction:column;">
+        <div class="modal-head">
+          <div><h2>PDF Preview</h2></div>
+          <button class="secondary modal-close" type="button" onclick="closePdfLightbox()">Close</button>
+        </div>
+        <div style="flex:1;min-height:0;">
+          <iframe id="pdfLightboxFrame" src="" style="width:100%;height:100%;border:0;border-radius:14px;background:#fff;"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <script src="/bridge.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>
+
