@@ -445,7 +445,7 @@
       imageUrl: row.image_url,
       thumbUrl: row.image_url,
       fullImageUrl: row.image_url,
-      driveFileId: row.storage_path,
+      storagePath: row.storage_path,
       note: row.note || '',
       isCover: !!row.is_cover,
       isPackagingProof: !!row.is_packaging_proof,
@@ -486,7 +486,7 @@
 
   async function getLabelsForItem(itemId) {
     const rows = await query(supabase.from('labels').select('*').eq('item_id', itemId).order('uploaded_at', { ascending: false }));
-    return (rows || []).map(row => ({ labelId: row.label_id, itemId: row.item_id, fileUrl: row.file_url, driveFileId: row.storage_path, note: row.note || '', uploadedAt: row.uploaded_at || '' }));
+    return (rows || []).map(row => ({ labelId: row.label_id, itemId: row.item_id, fileUrl: row.file_url, storagePath: row.storage_path, note: row.note || '', uploadedAt: row.uploaded_at || '' }));
   }
 
   async function deleteLabelById(labelId) {

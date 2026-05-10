@@ -22,8 +22,8 @@
 
     <div id="loginScreen" class="login-screen">
       <div class="retro-window">
-        <div class="retro-titlebar">
-          <span>System Login</span>
+          <div class="retro-titlebar">
+          <span>Inventory Access</span>
           <div class="retro-title-buttons">
             <button type="button" class="retro-title-btn" disabled>?</button>
             <button type="button" class="retro-title-btn" disabled>Ã—</button>
@@ -33,7 +33,7 @@
         <div class="retro-body">
           <div class="retro-left">
             <p class="retro-copy">
-              Please enter your user name and password to access the system.
+              Sign in to manage stock, labels, photos, and order tasks.
             </p>
 
             <div class="retro-form-row">
@@ -70,14 +70,11 @@
       </header>
 
       <nav class="tabbar">
-        <button class="tab active" id="tabBtn-dashboardTab" onclick="showTab('dashboardTab', this)">Dashboard</button>
-        <button class="tab" id="tabBtn-addTab" onclick="showTab('addTab', this)">Add Item</button>
-        <button class="tab" id="tabBtn-tableTab" onclick="showTab('tableTab', this)">Active Items</button>
-        <button class="tab" id="tabBtn-archivedTab" onclick="showTab('archivedTab', this)">Archived Items</button>
-        <button class="tab" id="tabBtn-actionsTab" onclick="showTab('actionsTab', this)">Actions</button>
+        <button class="tab active" id="tabBtn-dashboardTab" onclick="showTab('dashboardTab', this)">Overview</button>
+        <button class="tab" id="tabBtn-tableTab" onclick="showTab('tableTab', this)">Inventory</button>
+        <button class="tab" id="tabBtn-addTab" onclick="showTab('addTab', this)">Add</button>
+        <button class="tab" id="tabBtn-actionsTab" onclick="showTab('actionsTab', this)">Scan</button>
         <button class="tab" id="tabBtn-tasksTab" onclick="showTab('tasksTab', this)">Tasks</button>
-        <button class="tab" id="tabBtn-picturesTab" onclick="showTab('picturesTab', this)">Pictures</button>
-        <button class="tab" id="tabBtn-labelsTab" onclick="showTab('labelsTab', this)">Shipping Labels</button>
       </nav>
 
       <main class="content">
@@ -176,9 +173,10 @@
         <section id="tableTab" class="page">
           <section class="panel">
             <div class="panel-head">
-              <h2>Active Items</h2>
+              <h2>Inventory</h2>
               <div class="button-row compact">
                 <button class="secondary" type="button" onclick="loadActiveItemsTable()">Refresh Table</button>
+                <button class="secondary" type="button" onclick="showTab('archivedTab', document.getElementById('tabBtn-tableTab'))">Archived</button>
                 <button type="button" onclick="generatePackingPdf()">Packing PDF</button>
               </div>
             </div>
@@ -396,7 +394,7 @@
           <section class="panel">
             <div class="panel-head">
               <h2>Pictures</h2>
-              <div class="muted">Upload any number of pictures per item, with cover / proof flags.</div>
+              <div class="muted">Upload image files directly to Supabase Storage, with cover / proof flags.</div>
             </div>
 
             <div class="autocomplete-wrap">
@@ -428,7 +426,7 @@
           <section class="panel">
             <div class="panel-head">
               <h2>Shipping Labels</h2>
-              <div class="muted">Upload shipping labels / QR code PDFs and link them to an item.</div>
+              <div class="muted">Upload shipping label PDFs directly to Supabase Storage and link them to an item.</div>
             </div>
 
             <div class="autocomplete-wrap">
@@ -602,6 +600,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js"></script>
     <script src="config.js"></script>
     <script src="supabase-api.js"></script>
     <script src="bridge.js"></script>

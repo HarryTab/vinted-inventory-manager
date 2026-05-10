@@ -11,6 +11,7 @@
   let scannerDetector = null;
   let scannerFrameRequest = null;
   let scannerLastValue = '';
+  let scannerControls = null;
   const APP_VERSION = String((window.VINTED_CONFIG && window.VINTED_CONFIG.APP_VERSION) || 'local-dev').trim();
   const APP_VERSION_STORAGE_KEY = 'vinted.inventory.appVersion';
 
@@ -120,7 +121,7 @@
   }
 
   function money(value) {
-    return `Â£${Number(value || 0).toFixed(2)}`;
+    return `£${Number(value || 0).toFixed(2)}`;
   }
 
   function statusClass(status) {
@@ -604,15 +605,15 @@
 
         items.forEach(item => {
           html += `
-            <tr class="excel-row">
-              <td><input type="checkbox" class="row-check active-row-checkbox" data-item-id="${escapeHtml(item.itemId)}"></td>
+            <tr class="excel-row clickable-row" onclick="openItemEditor('${escapeHtml(item.itemId)}')">
+              <td><input type="checkbox" class="row-check active-row-checkbox" data-item-id="${escapeHtml(item.itemId)}" onclick="event.stopPropagation()"></td>
               <td>${escapeHtml(item.title)}</td>
               <td>${escapeHtml(item.itemId)}</td>
               <td>${escapeHtml(item.barcode || '')}</td>
               <td>${money(item.targetPrice)}</td>
               <td>${escapeHtml(item.listingDate)}</td>
               <td><span class="pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span></td>
-              <td><button type="button" class="secondary" onclick="openItemEditor('${escapeHtml(item.itemId)}')">Edit</button></td>
+              <td><button type="button" class="secondary" onclick="event.stopPropagation(); openItemEditor('${escapeHtml(item.itemId)}')">Open</button></td>
             </tr>
           `;
         });
@@ -681,14 +682,14 @@
 
         items.forEach(item => {
           html += `
-            <tr class="excel-row">
+            <tr class="excel-row clickable-row" onclick="openItemEditor('${escapeHtml(item.itemId)}')">
               <td>${escapeHtml(item.title)}</td>
               <td>${escapeHtml(item.itemId)}</td>
               <td>${escapeHtml(item.barcode || '')}</td>
               <td>${money(item.targetPrice)}</td>
               <td>${escapeHtml(item.listingDate)}</td>
               <td><span class="pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span></td>
-              <td><button type="button" class="secondary" onclick="openItemEditor('${escapeHtml(item.itemId)}')">Edit</button></td>
+              <td><button type="button" class="secondary" onclick="event.stopPropagation(); openItemEditor('${escapeHtml(item.itemId)}')">Open</button></td>
             </tr>
           `;
         });
@@ -841,27 +842,47 @@
   }
 
   async function startQrScanner() {
-    if (!('BarcodeDetector' in window)) {
-      renderMessage('scannerResult', 'This browser does not support live camera decoding. Paste the QR or barcode value into the manual field.', 'error');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      renderMessage('scannerResult', 'Camera access is not available in this browser. Paste the QR or barcode value into the manual field.', 'error');
+      scannerOverlay('Camera unavailable');
       return;
     }
 
     stopQrScanner();
     scannerLastValue = '';
-    scannerDetector = new BarcodeDetector({
-      formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e']
-    });
 
     try {
-      scannerStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
-        audio: false
-      });
       const video = document.getElementById('scannerVideo');
-      video.srcObject = scannerStream;
-      await video.play();
+      if (!video) throw new Error('Scanner video element is missing.');
       scannerOverlay('Scanning...');
-      scanFrame();
+
+      if (window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader) {
+        scannerDetector = new window.ZXingBrowser.BrowserMultiFormatReader();
+        scannerControls = await scannerDetector.decodeFromVideoDevice(undefined, video, result => {
+          const value = result && result.getText ? result.getText() : '';
+          if (value && value !== scannerLastValue) {
+            scannerLastValue = value;
+            lookupScannedCode(value);
+          }
+        });
+        return;
+      }
+
+      if ('BarcodeDetector' in window) {
+        scannerDetector = new BarcodeDetector({
+          formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e']
+        });
+        scannerStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false
+        });
+        video.srcObject = scannerStream;
+        await video.play();
+        scanFrame();
+        return;
+      }
+
+      throw new Error('No camera decoding library loaded. Try a hard refresh, then paste the code manually if it still fails.');
     } catch (err) {
       renderMessage('scannerResult', escapeHtml(err.message || 'Could not start camera.'), 'error');
       scannerOverlay('Camera unavailable');
@@ -889,6 +910,8 @@
   }
 
   function stopQrScanner() {
+    if (scannerControls && typeof scannerControls.stop === 'function') scannerControls.stop();
+    scannerControls = null;
     if (scannerFrameRequest) cancelAnimationFrame(scannerFrameRequest);
     scannerFrameRequest = null;
     if (scannerStream) scannerStream.getTracks().forEach(track => track.stop());
@@ -1389,7 +1412,7 @@
         <div class="picture-card">
           <div style="height:220px;display:flex;align-items:center;justify-content:center;background:#f8fafc;padding:16px;">
             <div style="text-align:center;">
-              <div style="font-size:44px;line-height:1;margin-bottom:10px;">ðŸ“„</div>
+              <div style="font-size:44px;line-height:1;margin-bottom:10px;">PDF</div>
               <div style="font-weight:700;">PDF Label</div>
             </div>
           </div>
@@ -1550,7 +1573,7 @@
         if (!result || !result.exists) {
           el.innerHTML = `
             <div class="packaging-proof-placeholder">
-              <div class="packaging-proof-icon">ðŸ“¦</div>
+              <div class="packaging-proof-icon">Proof</div>
               <div class="packaging-proof-title">No packaging proof image yet</div>
               <div class="muted">Upload a picture and mark it as Packaging Proof.</div>
             </div>
