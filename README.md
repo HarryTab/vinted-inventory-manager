@@ -78,8 +78,28 @@ The script asks for an admin email, username, and password. It stores the passwo
 
 The Actions tab now supports camera scanning when the browser exposes the `BarcodeDetector` API. It accepts QR codes and common barcodes. If a scanned QR contains a URL, the app looks for `itemId`, `item_id`, or `barcode` query parameters before falling back to the last URL path segment. If live scanning is not supported, paste the QR/barcode value into the manual lookup field.
 
+## GitHub Pages deployment
+
+This repo can deploy the static app in `public/` to GitHub Pages.
+
+In Supabase SQL Editor, run:
+
+```sql
+-- paste supabase/github-pages-policies.sql
+```
+
+In GitHub, add:
+
+- Repository variable `SUPABASE_URL`
+- Repository variable `SUPABASE_PUBLIC_URL`
+- Repository secret `SUPABASE_ANON_KEY`
+
+Then go to `Settings` -> `Pages` and set the source to `GitHub Actions`.
+Push to `main`; the `Deploy GitHub Pages` workflow will publish the app.
+
+For local static testing, copy `public/config.example.js` to `public/config.js` and fill in the same public Supabase values. Do not put the service-role key in `public/config.js`.
+
 ## Still to decide
 
-- Email alerts are stubbed until you choose an email provider.
-- Packing-list PDF generation is stubbed until we choose a PDF rendering approach.
-- Production auth is intentionally simple for migration parity; Supabase Auth can replace the `logins` table later.
+- Email alerts, packing-list PDF generation, and AI descriptions need a backend function and are not available on GitHub Pages yet.
+- The GitHub Pages policy file is permissive for a personal app. Supabase Auth policies are the right next step before sharing the site widely.

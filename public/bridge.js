@@ -14,6 +14,12 @@
           if (prop in target) return target[prop];
           return async (...args) => {
             try {
+              if (window.vintedApi && typeof window.vintedApi[prop] === 'function') {
+                const result = await window.vintedApi[prop](...args);
+                if (successHandler) successHandler(result);
+                return;
+              }
+
               const response = await fetch(`/api/rpc/${String(prop)}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

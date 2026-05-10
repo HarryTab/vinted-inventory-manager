@@ -5,7 +5,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <title>Vinted Inventory Manager</title>
-    <link rel="stylesheet" href="/app.css">
+    <link rel="stylesheet" href="app.css">
   </head>
   <body>
     <div id="toastContainer" class="toast-container"></div>
@@ -590,8 +590,12 @@
       </div>
     </div>
 
-    <script src="/bridge.js"></script>
-    <script src="/app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase-api.js"></script>
+    <script src="bridge.js"></script>
+    <script src="app.js"></script>
   </body>
 </html>
 
