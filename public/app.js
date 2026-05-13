@@ -12,6 +12,7 @@
   let scannerFrameRequest = null;
   let scannerLastValue = '';
   let scannerControls = null;
+  let html5QrScanner = null;
   const APP_VERSION = String((window.VINTED_CONFIG && window.VINTED_CONFIG.APP_VERSION) || 'local-dev').trim();
   const APP_VERSION_STORAGE_KEY = 'vinted.inventory.appVersion';
 
@@ -78,6 +79,10 @@
   function setElementHtml(id, html) {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
+  }
+
+  function isPhoneView() {
+    return document.body.classList.contains('device-phone') || window.innerWidth <= 767;
   }
 
   const startupReady = prepareAppVersion().catch(err => {
@@ -570,6 +575,33 @@
     }
   }
 
+  function renderInventoryCards(container, items, rowCount, options = {}) {
+    let html = `<div class="muted record-count">Rows shown: <strong>${rowCount}</strong></div><div class="mobile-record-list">`;
+    items.forEach(item => {
+      const checkbox = options.selectable
+        ? `<input type="checkbox" class="row-check active-row-checkbox" data-item-id="${escapeHtml(item.itemId)}" onclick="event.stopPropagation()">`
+        : '';
+      html += `
+        <article class="mobile-record-card" onclick="openItemEditor('${escapeHtml(item.itemId)}')">
+          <div class="mobile-record-main">
+            <div>
+              <div class="mobile-record-title">${escapeHtml(item.title)}</div>
+              <div class="mobile-record-meta">${escapeHtml(item.itemId)} · ${escapeHtml(item.barcode || 'No barcode')}</div>
+            </div>
+            ${checkbox}
+          </div>
+          <div class="mobile-record-grid">
+            <span>${money(item.targetPrice)}</span>
+            <span>${escapeHtml(item.listingDate || 'No date')}</span>
+            <span class="pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span>
+          </div>
+        </article>
+      `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
   function loadActiveItemsTable() {
     const query = document.getElementById('activeTableSearch')?.value || '';
     setElementHtml('activeItemsTable', tableSkeletonHtml('Loading records...', 8, 7));
@@ -582,6 +614,17 @@
 
         if (!items.length) {
           el.innerHTML = `<p class="muted">No active items to show. Rows: ${rowCount}</p>`;
+          return;
+        }
+
+        if (isPhoneView()) {
+          renderInventoryCards(el, items, rowCount, { selectable: true });
+          el.querySelectorAll('.active-row-checkbox').forEach(cb => {
+            cb.addEventListener('change', function () {
+              if (this.checked) selectedActiveIds.add(this.dataset.itemId);
+              else selectedActiveIds.delete(this.dataset.itemId);
+            });
+          });
           return;
         }
 
@@ -660,6 +703,11 @@
 
         if (!items.length) {
           el.innerHTML = `<p class="muted">No archived items to show. Rows: ${rowCount}</p>`;
+          return;
+        }
+
+        if (isPhoneView()) {
+          renderInventoryCards(el, items, rowCount);
           return;
         }
 
@@ -856,6 +904,26 @@
       if (!video) throw new Error('Scanner video element is missing.');
       scannerOverlay('Scanning...');
 
+      if (window.Html5Qrcode) {
+        video.style.display = 'none';
+        html5QrScanner = new Html5Qrcode('qrReader', false);
+        await html5QrScanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: size => {
+            const edge = Math.floor(Math.min(size.width, size.height) * 0.72);
+            return { width: edge, height: edge };
+          } },
+          value => {
+            if (value && value !== scannerLastValue) {
+              scannerLastValue = value;
+              lookupScannedCode(value);
+            }
+          }
+        );
+        scannerOverlay('Scanning QR code...');
+        return;
+      }
+
       if (window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader) {
         scannerDetector = new window.ZXingBrowser.BrowserMultiFormatReader();
         scannerControls = await scannerDetector.decodeFromVideoDevice(undefined, video, result => {
@@ -910,6 +978,12 @@
   }
 
   function stopQrScanner() {
+    if (html5QrScanner) {
+      html5QrScanner.stop().catch(() => {}).finally(() => {
+        if (html5QrScanner) html5QrScanner.clear();
+        html5QrScanner = null;
+      });
+    }
     if (scannerControls && typeof scannerControls.stop === 'function') scannerControls.stop();
     scannerControls = null;
     if (scannerFrameRequest) cancelAnimationFrame(scannerFrameRequest);
@@ -917,7 +991,10 @@
     if (scannerStream) scannerStream.getTracks().forEach(track => track.stop());
     scannerStream = null;
     const video = document.getElementById('scannerVideo');
-    if (video) video.srcObject = null;
+    if (video) {
+      video.srcObject = null;
+      video.style.display = 'block';
+    }
     scannerOverlay('Camera idle');
   }
 
@@ -1618,10 +1695,40 @@
           return;
         }
 
+        if (isPhoneView()) {
+          let cardHtml = '<div class="mobile-record-list">';
+          tasks.forEach(task => {
+            cardHtml += `
+              <article class="mobile-record-card">
+                <div class="mobile-record-main">
+                  <div>
+                    <div class="mobile-record-title">${escapeHtml(task.title)}</div>
+                    <div class="mobile-record-meta">${escapeHtml(task.itemId)} · ${escapeHtml(task.taskLabel)}</div>
+                  </div>
+                  ${task.isUrgent ? '<span class="mini-flag urgent">Urgent</span>' : '<span class="mini-flag normal">Normal</span>'}
+                </div>
+                <div class="mobile-record-grid">
+                  <span class="pill ${statusClass(task.status)}">${escapeHtml(task.status)}</span>
+                  <span>${escapeHtml(task.ageDays || 0)} day(s)</span>
+                </div>
+                <div class="button-row compact">
+                  <button type="button" class="secondary" onclick="openItemEditor('${escapeHtml(task.itemId)}')">Open</button>
+                  <button type="button" onclick="completeTaskAction('${escapeHtml(task.taskType)}','${escapeHtml(task.itemId)}')">Complete</button>
+                </div>
+              </article>
+            `;
+          });
+          cardHtml += '</div>';
+          el.innerHTML = cardHtml;
+          return;
+        }
+
         const groups = {
-          LIST_ITEM: { title: 'To List', tasks: [] },
-          PACK_ITEM: { title: 'To Pack', tasks: [] },
-          DISPATCH_ITEM: { title: 'To Dispatch', tasks: [] }
+          MARK_SOLD: { title: 'Mark Sold', tasks: [] },
+          PACK_ITEM: { title: 'Pack', tasks: [] },
+          DISPATCH_ITEM: { title: 'Dispatch', tasks: [] },
+          MARK_DELIVERED: { title: 'Delivered', tasks: [] },
+          REVIEW_RETURN: { title: 'Returns', tasks: [] }
         };
 
         tasks.forEach(task => {

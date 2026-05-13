@@ -471,6 +471,23 @@
     display: block;
   }
 
+  .qr-reader {
+    position: absolute;
+    inset: 0;
+  }
+
+  .qr-reader video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+  }
+
+  .qr-reader__dashboard,
+  #qrReader__dashboard_section_swaplink,
+  #qrReader__dashboard_section_csr {
+    display: none !important;
+  }
+
   .scanner-overlay {
     position: absolute;
     inset: auto 12px 12px 12px;
@@ -1305,6 +1322,52 @@
   .clickable-row { cursor: pointer; }
   .clickable-row:hover { background: rgba(15, 118, 110, 0.06); }
 
+  .mobile-record-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .mobile-record-card {
+    width: 100%;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.78);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .mobile-record-main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .mobile-record-title {
+    font-weight: 800;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-record-meta {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-record-grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    color: #475569;
+    font-size: 0.88rem;
+  }
+
   @media (min-width: 900px) {
     .app-shell { padding-bottom: 24px; }
     .tabbar {
@@ -1345,13 +1408,34 @@
       flex-direction: column;
       align-items: stretch;
     }
-    table { min-width: 760px; }
+    table { min-width: 0; width: 100%; }
     #activeItemsTable,
     #archivedItemsTable,
     #tasksGrouped,
     #auditLogTable {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+      overflow-x: hidden;
       border-radius: 8px;
+    }
+    #activeItemsTable table,
+    #archivedItemsTable table,
+    #tasksGrouped table {
+      display: none;
+    }
+    .toolbar-card,
+    .bulk-row,
+    .form-grid,
+    .panel-grid,
+    .pictures-gallery {
+      min-width: 0;
+      width: 100%;
+    }
+    .autocomplete-wrap,
+    label,
+    input,
+    select,
+    textarea,
+    button {
+      max-width: 100%;
     }
   }

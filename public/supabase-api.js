@@ -510,39 +510,35 @@
   }
 
   async function getTasks() {
-    const settings = await getSettings();
-    const warningDays = toNumber(settings.STALE_WARNING_DAYS || 14);
-    const dangerDays = toNumber(settings.STALE_DANGER_DAYS || 30);
-    const pictures = await query(supabase.from('pictures').select('item_id,photo_type,is_packaging_proof'));
-    const byItem = new Map();
-    for (const picture of pictures || []) {
-      const list = byItem.get(picture.item_id) || [];
-      list.push(picture);
-      byItem.set(picture.item_id, list);
-    }
-
     const tasks = [];
     for (const row of await selectInventory()) {
-      const itemPictures = byItem.get(row.item_id) || [];
-      if (['Ready to List', 'Listed'].includes(row.status)) {
-        const types = new Set(itemPictures.map(pic => pic.photo_type));
-        for (const type of REQUIRED_PHOTO_TYPES_FOR_LISTING) {
-          if (!types.has(type)) tasks.push({ itemId: row.item_id, title: row.title, taskType: 'photo', taskLabel: `Add ${type} photo`, status: row.status, ageDays: 0, urgent: true });
-        }
-      }
-      if (row.status === 'Sold' && !itemPictures.some(pic => pic.is_packaging_proof)) {
-        tasks.push({ itemId: row.item_id, title: row.title, taskType: 'packagingProof', taskLabel: 'Add packaging proof', status: row.status, ageDays: daysBetween(row.sale_date), urgent: true });
-      }
-      if (row.status === 'Listed') {
-        const age = daysBetween(row.listing_date);
-        if (age >= warningDays) tasks.push({ itemId: row.item_id, title: row.title, taskType: 'staleListing', taskLabel: age >= dangerDays ? 'Review stale listing' : 'Check listing age', status: row.status, ageDays: age, urgent: age >= dangerDays });
+      if (row.status === 'Reserved') {
+        tasks.push({ itemId: row.item_id, title: row.title, taskType: 'MARK_SOLD', taskLabel: 'Mark as sold', status: row.status, ageDays: daysBetween(row.updated_at), isUrgent: true });
+      } else if (row.status === 'Sold') {
+        tasks.push({ itemId: row.item_id, title: row.title, taskType: 'PACK_ITEM', taskLabel: 'Pack item', status: row.status, ageDays: daysBetween(row.sale_date || row.updated_at), isUrgent: true });
+      } else if (row.status === 'Packed') {
+        tasks.push({ itemId: row.item_id, title: row.title, taskType: 'DISPATCH_ITEM', taskLabel: 'Mark dispatched', status: row.status, ageDays: daysBetween(row.updated_at), isUrgent: true });
+      } else if (row.status === 'Dispatched') {
+        tasks.push({ itemId: row.item_id, title: row.title, taskType: 'MARK_DELIVERED', taskLabel: 'Mark delivered', status: row.status, ageDays: daysBetween(row.updated_at), isUrgent: false });
+      } else if (row.status === 'Returned') {
+        tasks.push({ itemId: row.item_id, title: row.title, taskType: 'REVIEW_RETURN', taskLabel: 'Review return', status: row.status, ageDays: daysBetween(row.updated_at), isUrgent: true });
       }
     }
     return tasks;
   }
 
-  async function completeTask() {
-    return { success: true };
+  async function completeTask(taskType, itemId) {
+    const transitions = {
+      MARK_SOLD: 'Sold',
+      PACK_ITEM: 'Packed',
+      DISPATCH_ITEM: 'Dispatched',
+      MARK_DELIVERED: 'Delivered',
+      REVIEW_RETURN: 'Archived'
+    };
+    const nextStatus = transitions[taskType];
+    if (!nextStatus) throw new Error('Unknown task type.');
+    await updateItemStatus(itemId, nextStatus, `Completed task: ${taskType}`);
+    return { success: true, message: `Status updated to ${nextStatus}.`, newStatus: nextStatus };
   }
 
   async function getDashboardData(rangeKey = 'last30') {
